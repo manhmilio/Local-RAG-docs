@@ -1,0 +1,31 @@
+# FastAPI và ASGI Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-multipart>=0.0.6
+
+# CORS và Middleware
+python-dotenv==1.0.0
+
+# LangChain và AI/ML
+langchain>=0.1.0
+langchain-community>=0.0.10
+sentence-transformers>=2.2.2
+
+# Ollama Integration
+ollama>=0.1.0
+
+# ChromaDB Vector Store
+chromadb>=0.4.22
+
+# PDF Processing
+PyPDF2>=3.0.0
+pypdf>=3.17.0
+
+# Utilities
+numpy>=1.26.0
+tiktoken>=0.5.0
+
+# Optional: Monitoring
+rich>=13.7.0
