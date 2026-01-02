@@ -1,12 +1,12 @@
 """
 Main FastAPI Application - Entry point của backend
 """
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from contextlib import asynccontextmanager
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import json
 
 from config import settings
@@ -20,6 +20,8 @@ from models import (
 from vector_store import VectorStore
 from llm_service import LLMService
 from pdf_processor import PDFProcessor
+from auth import verify_api_key, optional_verify_api_key
+from rate_limiter import check_rate_limit, rate_limiter
 
 # Configure logging
 logging.basicConfig(
@@ -69,9 +71,12 @@ async def lifespan(app: FastAPI):
 # Khởi tạo FastAPI app
 app = FastAPI(
     title="Medical Chatbot API",
-    description="API cho hệ thống chatbot chẩn đoán bệnh với RAG",
+    description="API cho hệ thống chatbot chẩn đoán bệnh với RAG. Hỗ trợ kết nối từ bất kỳ dự án nào thông qua REST API.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # Configure CORS
@@ -81,6 +86,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
 
@@ -90,7 +96,47 @@ async def root():
     return {
         "message": "Medical Chatbot API",
         "version": "1.0.0",
-        "docs": "/docs"
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": {
+            "chat": "/chat",
+            "chat_stream": "/chat/stream",
+            "upload": "/documents/upload",
+            "stats": "/documents/stats"
+        },
+        "authentication": settings.ENABLE_API_KEY_AUTH,
+        "rate_limiting": settings.ENABLE_RATE_LIMITING
+    }
+
+
+@app.get("/api/info", tags=["Root"])
+async def api_info():
+    """
+    Lấy thông tin chi tiết về API và cấu hình hệ thống
+    """
+    return {
+        "api_version": "1.0.0",
+        "model": settings.OLLAMA_MODEL,
+        "embedding_model": settings.EMBEDDING_MODEL,
+        "features": {
+            "rag_enabled": True,
+            "streaming_support": True,
+            "document_upload": True,
+            "multilingual": True
+        },
+        "limits": {
+            "max_tokens": settings.MAX_TOKENS,
+            "rate_limit_per_minute": settings.RATE_LIMIT_PER_MINUTE if settings.ENABLE_RATE_LIMITING else None,
+            "rate_limit_per_hour": settings.RATE_LIMIT_PER_HOUR if settings.ENABLE_RATE_LIMITING else None
+        },
+        "authentication": {
+            "required": settings.ENABLE_API_KEY_AUTH,
+            "method": "API Key (Header: X-API-Key)" if settings.ENABLE_API_KEY_AUTH else "None"
+        },
+        "cors": {
+            "allow_all_origins": settings.ALLOW_ALL_ORIGINS,
+            "allowed_origins": settings.cors_origins_list if not settings.ALLOW_ALL_ORIGINS else ["*"]
+        }
     }
 
 
@@ -114,7 +160,11 @@ async def health_check():
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["Chat"])
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    req: Request,
+    api_key: str = Depends(optional_verify_api_key)
+):
     """
     Chat endpoint - xử lý câu hỏi từ người dùng
     
@@ -123,7 +173,14 @@ async def chat(request: ChatRequest):
         
     Returns:
         ChatResponse với câu trả lời và sources
+        
+    Headers:
+        X-API-Key: API key for authentication (if enabled)
     """
+    # Check rate limit
+    if settings.ENABLE_RATE_LIMITING:
+        await check_rate_limit(req)
+    
     try:
         logger.info(f"Nhận câu hỏi: {request.message[:100]}...")
         
@@ -145,13 +202,24 @@ async def chat(request: ChatRequest):
 
 
 @app.post("/chat/stream", tags=["Chat"])
-async def chat_stream(request: ChatRequest):
+async def chat_stream(
+    request: ChatRequest,
+    req: Request,
+    api_key: str = Depends(optional_verify_api_key)
+):
     """
     Streaming chat endpoint - trả về response theo real-time
     
     Returns:
         StreamingResponse với Server-Sent Events (SSE)
+        
+    Headers:
+        X-API-Key: API key for authentication (if enabled)
     """
+    # Check rate limit
+    if settings.ENABLE_RATE_LIMITING:
+        await check_rate_limit(req)
+    
     async def generate_stream() -> AsyncGenerator[str, None]:
         try:
             async for chunk in llm_service.stream_response(
@@ -177,7 +245,10 @@ async def chat_stream(request: ChatRequest):
 
 
 @app.post("/documents/upload", response_model=DocumentUploadResponse, tags=["Documents"])
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    api_key: str = Depends(verify_api_key)
+):
     """
     Upload và xử lý tài liệu PDF y tế
     
@@ -186,6 +257,9 @@ async def upload_document(file: UploadFile = File(...)):
         
     Returns:
         DocumentUploadResponse với thông tin xử lý
+        
+    Headers:
+        X-API-Key: API key for authentication (required if auth is enabled)
     """
     try:
         # Kiểm tra file type
@@ -232,9 +306,12 @@ async def get_document_stats():
 
 
 @app.post("/documents/reindex", tags=["Documents"])
-async def reindex_documents():
+async def reindex_documents(api_key: str = Depends(verify_api_key)):
     """
     Reindex tất cả PDF files trong thư mục data
+    
+    Headers:
+        X-API-Key: API key for authentication (required if auth is enabled)
     """
     try:
         logger.info("Bắt đầu reindex documents...")

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     
     # Server Configuration
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001
     RELOAD: bool = True
     
     # Ollama Configuration
@@ -36,13 +36,32 @@ class Settings(BaseSettings):
     TOP_K_RESULTS: int = 3
     SIMILARITY_THRESHOLD: float = 0.7
     
-    # CORS
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+    # CORS Configuration
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
+    ALLOW_ALL_ORIGINS: bool = False  # Set True để cho phép tất cả origins
+    
+    # API Key Authentication
+    ENABLE_API_KEY_AUTH: bool = False  # Set True để bật xác thực API key
+    API_KEYS: str = ""  # Danh sách API keys, cách nhau bởi dấu phẩy
+    
+    # Rate Limiting
+    ENABLE_RATE_LIMITING: bool = True
+    RATE_LIMIT_PER_MINUTE: int = 60
+    RATE_LIMIT_PER_HOUR: int = 1000
     
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins thành list"""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        if self.ALLOW_ALL_ORIGINS:
+            return ["*"]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+    
+    @property
+    def api_keys_list(self) -> List[str]:
+        """Parse API keys thành list"""
+        if not self.API_KEYS:
+            return []
+        return [key.strip() for key in self.API_KEYS.split(",") if key.strip()]
     
     class Config:
         env_file = ".env"
