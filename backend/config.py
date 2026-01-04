@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # Ollama Configuration
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "mistral:7b"
+    OLLAMA_MODEL: str = "llama3.2:3B"
     
     # ChromaDB Configuration
     CHROMA_PERSIST_DIRECTORY: str = "./chroma_db"
