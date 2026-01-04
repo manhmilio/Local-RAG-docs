@@ -357,5 +357,3 @@ Get-Content logs.txt -Tail 50
 ---
 
 **Chúc bạn code vui vẻ! 🚀**
-
-*Nếu gặp vấn đề, đừng ngại tạo issue trên GitHub.*

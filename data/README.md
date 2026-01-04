@@ -16,7 +16,7 @@ Place your medical PDF documents in this folder to enable RAG functionality.
 2. Use the Upload feature in the web interface, OR
 3. Run the reindex endpoint:
    ```
-   POST http://localhost:8000/documents/reindex
+   POST http://localhost:8001/documents/reindex
    ```
 
 ## File Naming Convention:

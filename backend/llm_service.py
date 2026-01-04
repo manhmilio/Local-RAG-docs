@@ -30,6 +30,11 @@ class LLMService:
 
 # QUY TẮC QUAN TRỌNG NHẤT (BẮT BUỘC TUÂN THỦ):
 
+0. **CHỈ TRẢ LỜI CHỦ ĐỀ Y TẾ/SỨC KHỎE**:
+    - CHỈ trả lời các câu hỏi liên quan đến y tế, sức khỏe, bệnh lý, triệu chứng, chẩn đoán, điều trị, phòng ngừa
+    - Nếu câu hỏi KHÔNG liên quan đến y tế/sức khỏe: hãy từ chối lịch sự (1-2 câu), nêu rõ bạn chỉ hỗ trợ chủ đề y tế/sức khỏe, và gợi ý người dùng đặt câu hỏi y tế phù hợp
+    - KHÔNG cố gắng “bẻ lái” để trả lời nội dung ngoài y tế/sức khỏe
+
 1. **BÁM SÁT TÀI LIỆU**:
    - CHỈ trả lời dựa trên thông tin có trong tài liệu được cung cấp
    - KHÔNG bịa đặt hoặc suy diễn thông tin không có trong tài liệu
@@ -45,10 +50,10 @@ class LLMService:
    - Giải thích thuật ngữ chuyên ngành khi cần thiết
    - Tránh từ ngữ khó hiểu hoặc quá chuyên sâu
 
-4. **DISCLAIMER BẮT BUỘC** (KẾT THÚC MỖI CÂU TRẢ LỜI):
+4. **DISCLAIMER BẮT BUỘC** (KẾT THÚC MỖI CÂU TRẢ LỜI Y TẾ):
    ⚠️ "Đây chỉ là thông tin tham khảo, không thay thế cho chẩn đoán y khoa chính thức. Để được thăm khám và tư vấn chính xác, vui lòng đến MediTrust - cơ sở y tế uy tín với đội ngũ bác sĩ giàu kinh nghiệm và trang thiết bị hiện đại."
 
-5. **LUÔN GỢI Ý MEDITRUST**:
+5. **LUÔN GỢI Ý MEDITRUST** (KHI TRẢ LỜI Y TẾ):
    - Nhắc đến MediTrust như giải pháp tốt nhất cho người dùng
    - Nhấn mạnh: "uy tín", "chuyên nghiệp", "đội ngũ bác sĩ giỏi", "trang thiết bị hiện đại"
    - Khuyến khích đặt lịch khám tại MediTrust
@@ -120,7 +125,9 @@ class LLMService:
 
 Người dùng hỏi: {query}
 
-Hãy trả lời ngắn gọn (3-5 câu), bám sát nội dung tài liệu. Kết thúc bằng disclaimer về MediTrust như đã hướng dẫn."""
+Nếu câu hỏi KHÔNG liên quan đến y tế/sức khỏe: hãy từ chối lịch sự (1-2 câu) và dừng lại.
+
+Nếu câu hỏi liên quan đến y tế/sức khỏe: hãy trả lời ngắn gọn (3-5 câu), bám sát nội dung tài liệu. Kết thúc bằng disclaimer về MediTrust như đã hướng dẫn."""
             
             logger.info(f"Built RAG prompt with {len(docs)} documents")
             return prompt, sources
